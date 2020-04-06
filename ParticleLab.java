@@ -80,10 +80,8 @@ public class ParticleLab{
     }
     
     if (tool == SAVEFILE) {
-       //Without these two lines, save file action kills the space it touches.
        tool = EMPTY;
-       particleGrid[row][col] = particle; //should not need to update array here BUT original did not have this line 
-                                          //and somehow was updating the array anyway...
+       particleGrid[row][col] = particle; 
       ParticleLabFiles.writeFile(particleGrid, NEW_FILE_NAME);
     }
     
@@ -184,10 +182,6 @@ public class ParticleLab{
     
   }
   
-  
-  //TODO: bug occurs where small bits of the destructor sometimes disappear
-  //unsure if it is destructor code or vapor code causing this
-  //update I think it is the vapor code
   public void destructor(int r, int c){
     int above = r - 2;
     int below = r +2;
@@ -227,7 +221,6 @@ public class ParticleLab{
     }
     
     //destroy particles below  
-    //crashed here during high activity involving gravity
     if(particleGrid[down][c] != EMPTY && particleGrid[down][c] != DESTRUCTOR){
       if(particleGrid[down][c] != METAL){
       particleGrid[down][c] = EMPTY;
@@ -318,7 +311,6 @@ public class ParticleLab{
   
   public void moveOilParticles(int r, int c){
     
-        
     int up = r-1;
     int down = r+1;
     int left = c-1;
