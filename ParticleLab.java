@@ -1,7 +1,4 @@
-/*
- *Hannah & Daniela
- *Underwater Particle Lab
- */
+
 import java.awt.*;
 import java.util.*;
 
