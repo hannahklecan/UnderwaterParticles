@@ -1,4 +1,7 @@
-
+/*
+ *Hannah & Daniela
+ *Underwater Particle Lab
+ */
 import java.awt.*;
 import java.util.*;
 
@@ -22,6 +25,10 @@ public class ParticleLab{
   public static final int TOGGLE_GENERATOR = 8;
   public static final int DESTRUCTOR = 9;
   public static final int VAPOR = 10;
+  
+  public static final int AIR_DENSITY = 0;
+  public static final int OIL_DENSITY = 1;
+  public static final int SAND_DENSITY = 2;
   
   public static boolean REVERSE_GRAVITY = false;
   public static boolean GENERATOR_ON = true;
@@ -80,8 +87,10 @@ public class ParticleLab{
     }
     
     if (tool == SAVEFILE) {
+       //Without these two lines, save file action kills the space it touches.
        tool = EMPTY;
-       particleGrid[row][col] = particle; 
+       particleGrid[row][col] = particle; //should not need to update array here BUT original did not have this line 
+                                          //and somehow was updating the array anyway...
       ParticleLabFiles.writeFile(particleGrid, NEW_FILE_NAME);
     }
     
@@ -108,7 +117,7 @@ public class ParticleLab{
     Color metal = new Color (76, 76, 76);
     Color sand = new Color (223, 196, 123);
     Color oil = new Color(255,204, 0,180);
-    Color vapor = new Color(51,204,255,110);
+    Color vapor = new Color(0,255,255,110);
     Color air = new Color(205,232,255,150);
      
     for (int r = 0; r < particleGrid.length; r++){
@@ -182,6 +191,8 @@ public class ParticleLab{
     
   }
   
+  
+  //TODO: check if bug still occurs where vapor deletes things
   public void destructor(int r, int c){
     int above = r - 2;
     int below = r +2;
@@ -194,7 +205,7 @@ public class ParticleLab{
     if(up < 0){ up = NBR_ROWS-1;}
     if(above < 0){ above = NBR_ROWS-1;}
     if(below > NBR_ROWS){below = 0; }
-        //enables wrapping horizontally 
+    //enables wrapping horizontally 
     if(left < 0){left = NBR_COLS-1;}
     if(right >= NBR_COLS){right = 0;}
     
@@ -221,6 +232,7 @@ public class ParticleLab{
     }
     
     //destroy particles below  
+    //crashed here during high activity involving gravity
     if(particleGrid[down][c] != EMPTY && particleGrid[down][c] != DESTRUCTOR){
       if(particleGrid[down][c] != METAL){
       particleGrid[down][c] = EMPTY;
@@ -260,7 +272,7 @@ public class ParticleLab{
     if(up < 0){ up = NBR_ROWS-1;}
     if(pushUp <0){pushUp = NBR_ROWS -1;}
     if(pushDown > NBR_ROWS){pushDown = 0; }
-        //enables wrapping horizontally 
+    //enables wrapping horizontally 
     if(left < 0){left = NBR_COLS-1;}
     if(right >= NBR_COLS){right = 0;}
     
@@ -311,6 +323,12 @@ public class ParticleLab{
   
   public void moveOilParticles(int r, int c){
     
+    int nextR = c+2;
+    int farR = c+3;
+    int nextL = c-2;
+    int farL = c-3;
+        
+    int above = r - 2;
     int up = r-1;
     int down = r+1;
     int left = c-1;
@@ -318,12 +336,16 @@ public class ParticleLab{
     
     if(down > NBR_ROWS){down = 0; }
     if(up < 0){ up = NBR_ROWS-1;}
+    if(above < 0){ above = NBR_ROWS-1;}
     
     //if reverse gravity button was clicked swap up and down
     if (REVERSE_GRAVITY){
+      
+      above = r+2;
       up = r+1;
       down = r-1;
       
+      if(above > NBR_ROWS-1){above = 0; }
       if(up > NBR_ROWS-1){up = 0; }
       if(down < 0){ down = NBR_ROWS-1;}
     }
@@ -331,8 +353,15 @@ public class ParticleLab{
     //enables wrapping horizontally 
     if(left < 0){left = NBR_COLS-1;}
     if(right >= NBR_COLS){right = 0;}
+
+    if(nextR >= NBR_COLS){nextR = 0;}
+    if(farR >= NBR_COLS){farR = 0;}
     
-        
+    if(nextL < 0){nextL = NBR_COLS-1;}
+    if(farL < 0){farL = NBR_COLS-1;}
+    
+    
+    //oil rises above water    
     if(particleGrid[up][c] == EMPTY || particleGrid[up][left] == EMPTY ||particleGrid[up][right] == EMPTY){
       
       //the oil will rise about 55% slower than air bubbles
@@ -351,7 +380,7 @@ public class ParticleLab{
       
     }//end checking if space is avaliable 
     
-    
+   
             
     else if(particleGrid[up][c] == OIL && (particleGrid[r][left] == EMPTY || particleGrid[r][right] == EMPTY)){
       
@@ -369,13 +398,16 @@ public class ParticleLab{
       
       }
       
-    }
+    }//checking through empty space
     
+    
+    //no checks for oil above oil needing to fall causing columns of oil to form
+    //this checks if air is above oil and allows it to pool in the region between air pockets
     else if(particleGrid[up][c] == AIR && (particleGrid[r][left] == AIR || particleGrid[r][right] == AIR)){
       
       //slow the oil down movement
       int speed = getRandomNumber(1,100);
-      if (speed <= 10){
+      if (speed <= 50){
       
       //make the oil pool above water also
       particleGrid[r][c] = AIR;
@@ -384,11 +416,48 @@ public class ParticleLab{
       //if there is nothing above the oil it rises
       particleGrid[r][c] = OIL;
       
-      }
+      } 
       
     }    
     
+    //function may have slightly improved oil movement
+    else if(particleGrid[up][c] == OIL && (particleGrid[r][left] == AIR || particleGrid[r][right] == AIR)){
+      
+      //slow the oil down movement
+      int speed = getRandomNumber(1,100);
+      if (speed <= 50){
+      
+      //empty the space below the oil as it rises
+      particleGrid[r][c] = EMPTY;
+      
+      c = poolOilBelow(r, c, up, right, left);
+      
+      //if there is nothing above the oil it rises
+      particleGrid[r][c] = OIL;
+      
+      }
+      
+    }//checking through air & oil 
     
+    
+    else if(particleGrid[up][c] == METAL && (particleGrid[r][nextR] == AIR && particleGrid[r][farR] == AIR)
+                                          ||(particleGrid[r][nextL] == AIR && particleGrid[r][farL] == AIR)){
+    
+      if(particleGrid[r][right] == AIR){
+        
+        particleGrid[r][c] = AIR;
+        particleGrid[r][right] = OIL;
+      }
+      else if(particleGrid[r][left] == AIR){
+        
+        particleGrid[r][c] = AIR;
+        particleGrid[r][left] = OIL;
+      }
+      
+    }
+    
+    
+
   }//end moveOil
   
   
@@ -444,6 +513,18 @@ public class ParticleLab{
             
     }
     
+    else if(particleGrid[up][c] == AIR && (particleGrid[r][left] == OIL || particleGrid[r][right] == OIL)){
+      
+      //empty the space below the air as it rises
+      particleGrid[r][c] = OIL;
+      
+      c = poolAir(r, c, up, right, left);
+      
+      //if there is nothing above the air it rises
+      particleGrid[r][c] = AIR;
+      
+            
+    }
         
     //checking if oil is above air
     if(particleGrid[up][c] == OIL ){
@@ -571,7 +652,7 @@ public class ParticleLab{
     
     while(!sentDirection){
       
-      //7% of time it goes left, 7% it goes right, 86% it goes straight up.
+      //7% of time it goes left, 7% it goes right, 86% it goes straight down.
       int directionPercentage = getRandomNumber(0, 100);
       
       //move left
@@ -801,30 +882,30 @@ public class ParticleLab{
     int particle = particleGrid[up][c];
 
     
+    //vapor disappears when it touches anything
+    if(particleGrid[up][c] != EMPTY){
+      particleGrid[r][c] = EMPTY;
+    }
+    
+    
     if(particleGrid[up][c] == EMPTY || particleGrid[up][left] == EMPTY ||particleGrid[up][right] == EMPTY){
       
-      int fadeChance = getRandomNumber(0, 500);
+      int fadeChance = getRandomNumber(0, 100);
       
       //empty the space below the air as it rises
       particleGrid[r][c] = EMPTY;
       
       c = getVaporDirection(r,c,up,right,left);
       
-      if(fadeChance >= 15){
+      if(fadeChance >= 8){
       particleGrid[up][c] = VAPOR;
       }
-      else{
-        //particleGrid[up][c] = particle;
-      }
+
       
     }//end checking if space is avaliable 
      
     
-    //vapor disappears when it touches anything
-    if(particleGrid[up][c] != EMPTY){
-      particleGrid[r][c] = EMPTY;
-    }
-    
+
   }
   
     
@@ -832,7 +913,6 @@ public class ParticleLab{
     
     
     boolean sentDirection = false;
-    
     
     while(!sentDirection){
       
